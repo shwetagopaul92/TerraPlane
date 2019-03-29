@@ -9,7 +9,6 @@
 #load libraries
 ########################
 require(shiny)
-require(shinyalert)
 require(DT)
 require(AnVIL)
 ########################
@@ -177,12 +176,12 @@ mytable=NA
                       error=function(e) print("Please enter a valid pattern!"))
       mytable<<-subs
       if (is.data.frame(mytable)){
-        output$mytable = renderDataTable(subs,options = list(scrollX = TRUE,pageLength=5),selection = 'single')
+        output$mytable = DT::renderDataTable(subs,options = list(scrollX = TRUE,pageLength=5),selection = 'single')
       }
       else{
         subs = as.data.frame(subs)
         names(subs) <- NULL
-        output$mytable = renderDataTable(subs)
+        output$mytable = DT::renderDataTable(subs)
       }
     })
 
@@ -206,7 +205,7 @@ mytable=NA
 
     observeEvent(input$resetButton, {
       subs=data.frame(id=NA,workflow=NA)
-      output$mytable = renderDataTable({subs},options = list(scrollX = TRUE,pageLength=5))
+      output$mytable = DT::renderDataTable({subs},options = list(scrollX = TRUE,pageLength=5))
       clearInputs()
     })
     
@@ -248,11 +247,6 @@ mytable=NA
 	wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
       	output$currentconfig=renderText(wdlconfig)
     showNotification("Configured!")
-    })
-    observeEvent(input$rmv, {
-      removeUI(
-        selector = "div:has(> #txt)"
-      )
     })
   }
 )

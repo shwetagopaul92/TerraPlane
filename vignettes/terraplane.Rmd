@@ -1,5 +1,5 @@
 ---
-title: "terraplane"
+title: "TerraPlane"
 author: "BJ Stubbs"
 date: "3/29/2019"
 output: html_document

@@ -121,7 +121,7 @@ createConfig<-function(wdlnamespace, wdlname, wdlInputsList){
 #shiny
 ########################
 
-terraplane = function() {
+TerraPlane = function() {
 
 
 ########################
@@ -143,7 +143,7 @@ mytable=NA
         mainPanel("",width=10,
           tabsetPanel(
             tabPanel("Data",h3("Current Data"),
-            dataTableOutput('mytable')),
+            DT::dataTableOutput('mytable')),
             tabPanel("Method",h3("Method"),
             htmlOutput("methodcode")),
             tabPanel("Configure",h3("Configure Method"),

@@ -4,8 +4,8 @@
 #'to help filter dockstore to find methods
 #'@import shiny
 #'@export
-runterraplane<-function(){
-  myfile = system.file("shinyApps/terraplaneApp.R",package="terraplane")
+runTerraPlane<-function(){
+  myfile = system.file("shinyApps/TerraPlaneApp.R",package="TerraPlane")
   source(myfile)
-  terraplane()
+  TerraPlane()
 }

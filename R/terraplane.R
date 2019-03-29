@@ -65,24 +65,33 @@ parseInputs<-function(inputList){
 	inputNames
 }
 
+clearInputs <- function(){
+  for(i in 1:length(ids)){
+    removeUI(
+      selector = paste0('#', ids[i])
+    )
+  }
+  ids<<-c()
+}
 
 #https://gallery.shinyapps.io/111-insert-ui/
 createInputs<-function(inputVector){
+  clearInputs()
   for(i in 1:length(inputVector)){
-	id=paste0("div",length(ids))
-	textname=gsub(inputVector[i],pattern="[.]",replacement="_")
-  	insertUI(
-      		selector = '#placeholder',
-      		## wrap element in a div with id for ease of removal
-      		ui = shiny::tags$div(
-			textInput(textname,inputVector[i]),
-       	 		id = id
-        		)
-		)
-	ids<<-c(ids,id)
-	wdlinputNames<<-c(wdlinputNames,textname)
-   }
-    	
+    id=paste0("div",length(ids))
+    textname=gsub(inputVector[i],pattern="[.]",replacement="_")
+    insertUI(
+      selector = '#placeholder',
+      ## wrap element in a div with id for ease of removal
+      ui = shiny::tags$div(
+        textInput(textname,inputVector[i]),
+        id = id
+      )
+    )
+    ids<<-c(ids,id)
+    wdlinputNames<<-c(wdlinputNames,textname)
+  }
+  
 }
 
 
@@ -112,6 +121,7 @@ createConfig<-function(wdlnamespace, wdlname, wdlInputsList){
 ########################
 #shiny
 ########################
+
 terraplane = function() {
 
 
@@ -139,6 +149,8 @@ mytable=NA
             htmlOutput("methodcode")),
             tabPanel("Configure",h3("Configure Method"),
 	        actionButton("configureButton", "Configure"),
+	        #actionButton("rmv", "Remove UI"),
+	        #textInput("txt", "This is no longer useful"),
           	textInput("workspaceNamespace", "Workspace Namespace"),
           	textInput("wdlnamespace", "Namespace"),
           	textInput("wdlname", "Name"),
@@ -146,8 +158,11 @@ mytable=NA
 	    ),
 	    tabPanel("CurrentConfig",h3("Method"),
 	        actionButton("sendToTerra", "SendToTerra"),
-          	textOutput("currentconfig"))
+          	textOutput("currentconfig")),
+		  tabPanel("About", h3("About"), HTML("<br> Hello <br> Goodbye!"))
+		
           )
+		   
         )
       )
     )
@@ -192,7 +207,17 @@ mytable=NA
     observeEvent(input$resetButton, {
       subs=data.frame(id=NA,workflow=NA)
       output$mytable = renderDataTable({subs},options = list(scrollX = TRUE,pageLength=5))
+      clearInputs()
     })
+    
+    clearInputs <- function(){
+      for(i in 1:length(ids)){
+        removeUI(
+          selector = paste0('#', ids[i])
+        )
+      }
+      ids<<-c()
+    }
 
     observeEvent(input$sendToTerra, {
       terra$postWorkspaceMethodConfig(
@@ -222,8 +247,12 @@ mytable=NA
 	wdlInputsList<<-as.list(myinputs)
 	wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
       	output$currentconfig=renderText(wdlconfig)
-    #showNotification("Configured!")
-    shinyalert("Yay!","Method configured!", type="success")
+    showNotification("Configured!")
+    })
+    observeEvent(input$rmv, {
+      removeUI(
+        selector = "div:has(> #txt)"
+      )
     })
   }
 )

@@ -1,4 +1,4 @@
-# Terraplane
+# TerraPlane
 
 <img src="images/terraplane.png" width="250">
 

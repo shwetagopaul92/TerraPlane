@@ -1,4 +1,3 @@
-# terraplane
 
 ![](images/terraplane.png)
 

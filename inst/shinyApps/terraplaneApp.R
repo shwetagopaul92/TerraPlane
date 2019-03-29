@@ -239,14 +239,14 @@ mytable=NA
     })
 
     observeEvent(input$configureButton, {
-	myinputs=sapply(wdlinputNames, function(x){
-		input[[x]]
-	})
-	names(myinputs)=wdlinputNamesUnc
-	wdlInputsList<<-as.list(myinputs)
-	wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
-      	output$currentconfig=renderText(wdlconfig)
-    showNotification("Configured!")
+	    myinputs=sapply(wdlinputNames, function(x){
+		  input[[x]]
+	  })
+	    names(myinputs)=wdlinputNamesUnc
+	    wdlInputsList<<-as.list(myinputs)
+	    wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
+      output$currentconfig=renderText(wdlconfig)
+      showNotification("Configured!")
     })
   }
 )

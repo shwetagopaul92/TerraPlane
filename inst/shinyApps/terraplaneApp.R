@@ -149,8 +149,6 @@ mytable=NA
             htmlOutput("methodcode")),
             tabPanel("Configure",h3("Configure Method"),
 	        actionButton("configureButton", "Configure"),
-	        #actionButton("rmv", "Remove UI"),
-	        #textInput("txt", "This is no longer useful"),
           	textInput("workspaceNamespace", "Workspace Namespace"),
           	textInput("wdlnamespace", "Namespace"),
           	textInput("wdlname", "Name"),
@@ -159,7 +157,9 @@ mytable=NA
 	    tabPanel("CurrentConfig",h3("Method"),
 	        actionButton("sendToTerra", "SendToTerra"),
           	textOutput("currentconfig")),
-		  tabPanel("About", h3("About"), HTML("<br> Hello <br> Goodbye!"))
+		  tabPanel("About", h3("About"), HTML('<br> Terraplane is a shiny interface to help filter and configure dockstore methods
+                                      based on search term. <br>')
+		           )
 		
           )
 		   

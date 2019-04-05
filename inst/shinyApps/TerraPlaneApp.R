@@ -247,8 +247,9 @@ TerraPlane = function() {
         wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
         res <- jsonlite::fromJSON(wdlconfig)
         l1 = do.call(paste, list(names(res),res ))
-        #output$currentconfig = renderUI(HTML("<ul><li> hi </li><li>...more text...</li></ul>"))
-        output$currentconfig=renderText(l1)
+        output$currentconfig = renderText(wdlconfig)
+	#output$currentconfig = renderUI(HTML("<ul><li> hi </li><li>...more text...</li></ul>"))
+        #output$currentconfig=renderText(l1)
         showNotification("Configured!")
       })
     }

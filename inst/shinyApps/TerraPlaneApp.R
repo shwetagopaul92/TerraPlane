@@ -245,7 +245,10 @@ TerraPlane = function() {
         names(myinputs)=wdlinputNamesUnc
         wdlInputsList<<-as.list(myinputs)
         wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
-        output$currentconfig=renderText(wdlconfig)
+        res <- fromJSON(wdlconfig)
+        l1 = do.call(paste, list(names(res),res ))
+        output$currentconfig=renderText(l1)
+	#output$currentconfig=renderText(wdlconfig)
         showNotification("Configured!")
       })
     }

@@ -26,8 +26,7 @@ wdlpath="";
 wdlversion=1;
 wdlconfig="";
 wdlinputsList=list()
-outputs = list()
-prerequisites= list()
+outputs = c()
 hasSamp=0
 
 filterDS<-function(mypattern){
@@ -97,14 +96,14 @@ createInputs<-function(inputVector){
 }
 
 
-createConfig<-function(wdlnamespace, wdlname, wdlInputsList, outputs, prerequisites){
+createConfig<-function(wdlnamespace, wdlname, wdlInputsList, outputs){
   
   temp=list(
     namespace=wdlnamespace,
     name=wdlname,
     rootEntityType="string",
     inputs=wdlInputsList,
-    outputs=NULL,
+    outputs=outputs,
     prerequisites=NULL,
     methodRepoMethod=list(
       sourceRepo="dockstore",
@@ -175,7 +174,7 @@ TerraPlane = function() {
                                          #textInput("workspaceNamespace", "Workspace Namespace"),
                                          #textInput("wdlnamespace", "Namespace"),
                                          textInput("wdlname", "Name"),
-                                         #textInput("outputs", "Outputs"),
+                                         textInput("outputs", "Outputs"),
                                          #textInput("prerequisites", "Prerequisites"),
                                          shiny::tags$div(id = 'placeholder') 
                                 ),
@@ -280,7 +279,7 @@ TerraPlane = function() {
           name=input$wdlname,
           rootEntityType="string",
           inputs=wdlInputsList,
-          outputs=list(a="A"),
+          outputs=input$outputs,
           prerequisites=list(a="A"),
           methodRepoMethod=list(
             sourceRepo="dockstore",
@@ -298,8 +297,7 @@ TerraPlane = function() {
         })
         names(myinputs)=wdlinputNamesUnc
         wdlInputsList<<-as.list(myinputs)
-        outputs = list("test")
-        wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList, outputs, prerequisites )
+        wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList, input$outputs)
         res <- fromJSON(wdlconfig)
         l1 = do.call(paste, list(names(res),res ))
         output$currentconfig=renderText(l1)

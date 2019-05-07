@@ -1,9 +1,9 @@
 Package: TerraPlane
 Title: TerraPlane
 Description: To help filter dockstore to find methods based on search term.
-Version: 0.0.9
+Version: 0.1.1
 Author: BJ Stubbs, Shweta Gopaulakrishnan
-Depends: DT, AnVIL, shiny
+Depends: DT, AnVIL, shiny, httr, jsonlite
 Suggests: knitr
 Maintainer: Shweta Gopaulakrishnan <reshg@channing.harvard.edu>
 License: Artistic-2.0

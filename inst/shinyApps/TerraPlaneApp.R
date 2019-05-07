@@ -1,5 +1,5 @@
 ####################################
-#Name: terraplane
+#Name: TerraPlane
 #Goal: To help filter dockstore to find methods
 #      based on search term
 #
@@ -36,7 +36,8 @@ filterDS<-function(mypattern){
   #)
   keep=c("workflowName","description","author","organization","id","path",
          "full_workflow_path","gitUrl","sourceControl","dbCreateDate","last_modified_date")
-  temp[,keep]}
+  temp[,keep]
+}
 
 getWDL<-function(path){
   wdlpath<<-URLencode(path,reserved=TRUE)
@@ -113,7 +114,26 @@ createConfig<-function(wdlnamespace, wdlname, wdlInputsList){
   jsonlite::toJSON(temp, auto_unbox =TRUE, null="list")
 }
 
+getProjectNames <- function(billingworkspace_name){
+  ws = httr::content(terra$listWorkspaces())
+  mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+  myws_details = ws[mine]
+  for(i in myws_details){
+    mybilling = sapply(myws_details, function(x) {x$workspace$namespace==billingworkspace_name})
+  }
+  myProjectName = myws_details[mybilling]
+  myProjectName
+  
+}
 
+getBillingWorkspace <- function(){
+  ws = httr::content(terra$listWorkspaces())
+  mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+  myws_details = ws[mine]
+  billingworkspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
+  #from this get the names avaiable for the chosen billing(workspace) group
+  getProjectNames(billingworkspace_name)
+}
 
 #Setup:
 
@@ -133,7 +153,7 @@ TerraPlane = function() {
     #Start UI Config
     ##########
     ui = fluidPage(
-      titlePanel("terraplane"),
+      titlePanel("TerraPlane"),
       sidebarLayout(position = "left",
                     sidebarPanel(width=2,
                                  textInput("filterPattern", "Filter Pattern"),
@@ -148,9 +168,13 @@ TerraPlane = function() {
                                          htmlOutput("methodcode")),
                                 tabPanel("Configure",h3("Configure Method"),
                                          actionButton("configureButton", "Configure"),
-                                         textInput("workspaceNamespace", "Workspace Namespace"),
-                                         textInput("wdlnamespace", "Namespace"),
+                                         uiOutput("billingwsnamespace_dropdown"),
+                                         uiOutput("projectnames_dropdown"),
+                                         #textInput("workspaceNamespace", "Workspace Namespace"),
+                                         #textInput("wdlnamespace", "Namespace"),
                                          textInput("wdlname", "Name"),
+                                         #textInput("outputs", "Outputs"),
+                                         #textInput("prerequisites", "Prerequisites"),
                                          shiny::tags$div(id = 'placeholder') 
                                 ),
                                 tabPanel("CurrentConfig",h3("Method"),
@@ -184,7 +208,35 @@ TerraPlane = function() {
           output$mytable = DT::renderDataTable(subs)
         }
       })
-      
+      output$billingwsnamespace_dropdown <- renderUI({
+        ws = httr::content(terra$listWorkspaces())
+        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+        myws_details = ws[mine]
+        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
+        #from this get the names avaiable for the chosen billing(workspace) group
+        workspacename = as.list(workspace_name)
+        selectInput("workspaceNamespace", 
+                    "Select Workspace Namespace",
+                    choices = workspacename
+        )
+      })
+      output$projectnames_dropdown <- renderUI({
+        ws = httr::content(terra$listWorkspaces())
+        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+        myws_details = ws[mine]
+        myws_details = ws[mine]
+        for(i in myws_details){
+          mybilling = sapply(myws_details, function(x) {x$workspace$namespace==input$workspaceNamespace})
+        }
+        myProjectName = myws_details[mybilling]
+        project_names = lapply(myProjectName, function(x) {x$workspace$name})
+        myProjectNames = as.list(project_names)
+        selectInput("wdlnamespace", 
+                    "Select Project Name",
+                    choices = myProjectNames
+        )
+        
+      })
       output$methodcode=renderText({
         mytext="No Method Selected"
         s = input$mytable_rows_selected
@@ -245,11 +297,9 @@ TerraPlane = function() {
         names(myinputs)=wdlinputNamesUnc
         wdlInputsList<<-as.list(myinputs)
         wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
-        res <- jsonlite::fromJSON(wdlconfig)
+        res <- fromJSON(wdlconfig)
         l1 = do.call(paste, list(names(res),res ))
-        output$currentconfig = renderText(wdlconfig)
-	#output$currentconfig = renderUI(HTML("<ul><li> hi </li><li>...more text...</li></ul>"))
-        #output$currentconfig=renderText(l1)
+        output$currentconfig=renderText(l1)
         showNotification("Configured!")
       })
     }

@@ -28,6 +28,18 @@ wdlconfig="";
 wdlinputsList=list()
 hasSamp=0
 
+resetGlobal <- function(){
+  ids<<-c()
+  wdlinputs<<-c()
+  wdlinputNames<<-c()
+  wdlinputNamesUnc<<-c()
+  wdlpath<<-"";
+  wdlversion<<-1;
+  wdlconfig<<-"";
+  wdlinputsList<<-list()
+  hasSamp<<-0
+}
+
 filterDS<-function(mypattern){
   temp=jsonlite::fromJSON(
     httr::content(dockstore$allPublishedWorkflows(filter=mypattern),"text"))
@@ -241,6 +253,8 @@ TerraPlane = function() {
         mytext="No Method Selected"
         s = input$mytable_rows_selected
         if (length(s)) {
+          clearInputs()
+          resetGlobal()
           curPath<<-mytable[s,"full_workflow_path"]
           if(!is.na(curPath)){
             myres=getWDL(curPath)
@@ -278,8 +292,8 @@ TerraPlane = function() {
           name=input$wdlname,
           rootEntityType="string",
           inputs=wdlInputsList,
-          outputs=list(a="A"),
-          prerequisites=list(a="A"),
+          outputs=AnVIL::empty_object,
+          prerequisites=AnVIL::empty_object,
           methodRepoMethod=list(
             sourceRepo="dockstore",
             methodPath=wdlpath,

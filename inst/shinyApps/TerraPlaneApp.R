@@ -1,12 +1,12 @@
 ####################################
-#Name: TerraPlane
-#Goal: To help filter dockstore to find methods
+# Name: TerraPlane
+# Goal: To help filter dockstore to find methods
 #      based on search term
 #
 ####################################
 
 ########################
-#load libraries
+# load libraries
 ########################
 require(shiny)
 require(DT)
@@ -15,7 +15,7 @@ require(AnVIL)
 
 
 ########################
-#functions + setup
+# functions + setup
 ########################
 
 ids=c()
@@ -31,6 +31,7 @@ prerequisites= list()
 hasSamp=0
 TerraLogs=""
 
+# function to filter/search for Dockstore workflows based on user input
 filterDS<-function(mypattern){
   temp=jsonlite::fromJSON(
     httr::content(dockstore$allPublishedWorkflows(filter=mypattern),"text"))
@@ -42,6 +43,7 @@ filterDS<-function(mypattern){
   temp[,keep]
 }
 
+# function to fetch WDL of a chosen method from Dockstore
 getWDL<-function(path){
   wdlpath<<-URLencode(path,reserved=TRUE)
   temp=jsonlite::fromJSON(
@@ -58,6 +60,7 @@ getWDL<-function(path){
   return(list(wdl=wdl, sampleInputs=sampleInputs))
 }
 
+# function to parse inputs
 parseInputs<-function(inputList){
   inputNames=names(inputList)
   inputNames=sapply(inputNames,function(x){
@@ -68,6 +71,7 @@ parseInputs<-function(inputList){
   inputNames
 }
 
+# function to clear inputs
 clearInputs <- function(){
   for(i in 1:length(ids)){
     removeUI(
@@ -77,7 +81,8 @@ clearInputs <- function(){
   ids<<-c()
 }
 
-#https://gallery.shinyapps.io/111-insert-ui/
+# function to create inputs
+# https://gallery.shinyapps.io/111-insert-ui/
 createInputs<-function(inputVector){
   clearInputs()
   for(i in 1:length(inputVector)){
@@ -97,6 +102,7 @@ createInputs<-function(inputVector){
   
 }
 
+# function to fetch project names under a billing group
 getProjectNames <- function(billingworkspace_name){
   ws = content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
@@ -109,6 +115,7 @@ getProjectNames <- function(billingworkspace_name){
   
 }
 
+# function to fetch billing groups a user belongs to
 getBillingWorkspace <- function(){
   ws = content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
@@ -118,22 +125,20 @@ getBillingWorkspace <- function(){
   getProjectNames(billingworkspace_name)
 }
 
-#Setup:
+# Setup:
 
 ########################
-#shiny
+# Shiny
 ########################
 
 TerraPlane = function() {
   
-  
-  ########################
   curPath=NA
   mytable=NA
-  #start shiny app config
+  # start shiny app config
   shinyApp(
     ##########
-    #Start UI Config
+    # start UI Config
     ##########
     ui = fluidPage(
       titlePanel("TerraPlane"),
@@ -158,23 +163,23 @@ TerraPlane = function() {
                                          actionButton("sendToTerra", "Send To Terra")
                                 ),
                                 tabPanel("Run",h3("Pick your tool & run on Terra"),
+                                         uiOutput("billingwsnamespace_dropdownn"),
+                                         uiOutput("projectnames_dropdownn"),
+                                         textInput("wdlname", "Name"),
                                          actionButton("runOnTerra", "Run")
                                 ),
                                 tabPanel("About", h3("About"), HTML('<br> Terraplane is a shiny interface to help filter and configure dockstore methods
                                                                     based on search term. <br>')
                                 )
-                                
                                 )
-                              
                     )
                     )
-    )
-    ,
+    ),
     ####################
-    #Start Server Config
+    # Start Server Config
     ####################
     server = function(input, output, session) {
-      #set up output
+      # set up output
       observeEvent(input$filterButton, {
         subs = tryCatch(filterDS(input$filterPattern), 
                         error=function(e) print("Please enter a valid pattern!"))
@@ -188,22 +193,26 @@ TerraPlane = function() {
           output$mytable = DT::renderDataTable(subs)
         }
       })
+      
+      # dropdown for billing groups a user belongs to
       output$billingwsnamespace_dropdown <- renderUI({
         ws = content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
-        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
-        #from this get the names avaiable for the chosen billing(workspace) group
+        # options for workspace namespace
+        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  
+        # from this get the names avaiable for the chosen billing(workspace) group
         workspacename = as.list(workspace_name)
         selectInput("workspaceNamespace", 
                     "Select Workspace Namespace",
                     choices = workspacename
         )
       })
+      
+      # dropdown for project names available under a billing group
       output$projectnames_dropdown <- renderUI({
         ws = content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
-        myws_details = ws[mine]
         myws_details = ws[mine]
         for(i in myws_details){
           mybilling = sapply(myws_details, function(x) {x$workspace$namespace==input$workspaceNamespace})
@@ -215,8 +224,41 @@ TerraPlane = function() {
                     "Select Project Name",
                     choices = myProjectNames
         )
-        
       })
+      
+      # dropdown for billing groups a user belongs to
+      output$billingwsnamespace_dropdownn <- renderUI({
+        ws = content(terra$listWorkspaces())
+        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+        myws_details = ws[mine]
+        # options for workspace namespace
+        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  
+        # from this get the names avaiable for the chosen billing(workspace) group
+        workspacename = as.list(workspace_name)
+        selectInput("workspaceNamespace", 
+                    "Select Workspace Namespace",
+                    choices = workspacename
+        )
+      })
+      
+      # dropdown for project names available under a billing group
+      output$projectnames_dropdownn <- renderUI({
+        ws = content(terra$listWorkspaces())
+        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
+        myws_details = ws[mine]
+        for(i in myws_details){
+          mybilling = sapply(myws_details, function(x) {x$workspace$namespace==input$workspaceNamespace})
+        }
+        myProjectName = myws_details[mybilling]
+        project_names = lapply(myProjectName, function(x) {x$workspace$name})
+        myProjectNames = as.list(project_names)
+        selectInput("wdlnamespace", 
+                    "Select Project Name",
+                    choices = myProjectNames
+        )
+      })
+      
+      # display the method code 
       output$methodcode=renderText({
         mytext="No Method Selected"
         s = input$mytable_rows_selected
@@ -235,12 +277,14 @@ TerraPlane = function() {
         mytext
       })
       
+      # allow users to reset configuration
       observeEvent(input$resetButton, {
         subs=data.frame(id=NA,workflow=NA)
         output$mytable = DT::renderDataTable({subs},options = list(scrollX = TRUE,pageLength=5))
         clearInputs()
       })
       
+      # clear inputs
       clearInputs <- function(){
         for(i in 1:length(ids)){
           removeUI(
@@ -250,6 +294,7 @@ TerraPlane = function() {
         ids<<-c()
       }
       
+      # send defined configuration to Terra
       observeEvent(input$sendToTerra, {
         TerraLogs<<-terra$postWorkspaceMethodConfig(
           workspaceNamespace=input$workspaceNamespace,
@@ -270,6 +315,7 @@ TerraPlane = function() {
         showNotification("Method posted on Terra!")
       })
       
+      # create and submit jobs on Terra
       observeEvent(input$runOnTerra, {
         terra$createSubmission(
           workspaceNamespace=input$workspaceNamespace,
@@ -279,6 +325,6 @@ TerraPlane = function() {
           useCallCache=TRUE)
         showNotification("Job created!")
       })
-    }
-    )
+      
+    })
 }

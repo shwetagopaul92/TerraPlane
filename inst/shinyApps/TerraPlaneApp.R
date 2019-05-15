@@ -1,12 +1,12 @@
 ####################################
-#Name: TerraPlane
-#Goal: To help filter dockstore to find methods
+# Name: TerraPlane
+# Goal: To help filter dockstore to find methods
 #      based on search term
 #
 ####################################
 
 ########################
-#load libraries
+# load libraries
 ########################
 require(shiny)
 require(DT)
@@ -15,7 +15,7 @@ require(AnVIL)
 
 
 ########################
-#functions + setup
+# functions + setup
 ########################
 
 ids=c()
@@ -26,20 +26,12 @@ wdlpath="";
 wdlversion=1;
 wdlconfig="";
 wdlinputsList=list()
+outputs = list()
+prerequisites= list()
 hasSamp=0
+TerraLogs=""
 
-resetGlobal <- function(){
-  ids<<-c()
-  wdlinputs<<-c()
-  wdlinputNames<<-c()
-  wdlinputNamesUnc<<-c()
-  wdlpath<<-"";
-  wdlversion<<-1;
-  wdlconfig<<-"";
-  wdlinputsList<<-list()
-  hasSamp<<-0
-}
-
+# function to filter/search for Dockstore workflows based on user input
 filterDS<-function(mypattern){
   temp=jsonlite::fromJSON(
     httr::content(dockstore$allPublishedWorkflows(filter=mypattern),"text"))
@@ -51,6 +43,7 @@ filterDS<-function(mypattern){
   temp[,keep]
 }
 
+# function to fetch WDL of a chosen method from Dockstore
 getWDL<-function(path){
   wdlpath<<-URLencode(path,reserved=TRUE)
   temp=jsonlite::fromJSON(
@@ -67,6 +60,7 @@ getWDL<-function(path){
   return(list(wdl=wdl, sampleInputs=sampleInputs))
 }
 
+# function to parse inputs
 parseInputs<-function(inputList){
   inputNames=names(inputList)
   inputNames=sapply(inputNames,function(x){
@@ -77,6 +71,7 @@ parseInputs<-function(inputList){
   inputNames
 }
 
+# function to clear inputs
 clearInputs <- function(){
   for(i in 1:length(ids)){
     removeUI(
@@ -86,7 +81,8 @@ clearInputs <- function(){
   ids<<-c()
 }
 
-#https://gallery.shinyapps.io/111-insert-ui/
+# function to create inputs
+# https://gallery.shinyapps.io/111-insert-ui/
 createInputs<-function(inputVector){
   clearInputs()
   for(i in 1:length(inputVector)){
@@ -106,28 +102,9 @@ createInputs<-function(inputVector){
   
 }
 
-
-createConfig<-function(wdlnamespace, wdlname, wdlInputsList){
-  
-  temp=list(
-    namespace=wdlnamespace,
-    name=wdlname,
-    rootEntityType="string",
-    inputs=wdlInputsList,
-    outputs=NULL,
-    prerequisites=NULL,
-    methodRepoMethod=list(
-      sourceRepo="dockstore",
-      methodPath=wdlpath,
-      methodVersion=wdlversion
-    ),
-    methodConfigVersion=0
-  )
-  jsonlite::toJSON(temp, auto_unbox =TRUE, null="list")
-}
-
+# function to fetch project names under a billing group
 getProjectNames <- function(billingworkspace_name){
-  ws = httr::content(terra$listWorkspaces())
+  ws = content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
   myws_details = ws[mine]
   for(i in myws_details){
@@ -138,8 +115,9 @@ getProjectNames <- function(billingworkspace_name){
   
 }
 
+# function to fetch billing groups a user belongs to
 getBillingWorkspace <- function(){
-  ws = httr::content(terra$listWorkspaces())
+  ws = content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
   myws_details = ws[mine]
   billingworkspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
@@ -147,22 +125,20 @@ getBillingWorkspace <- function(){
   getProjectNames(billingworkspace_name)
 }
 
-#Setup:
+# Setup:
 
 ########################
-#shiny
+# Shiny
 ########################
 
 TerraPlane = function() {
   
-  
-  ########################
   curPath=NA
   mytable=NA
-  #start shiny app config
+  # start shiny app config
   shinyApp(
     ##########
-    #Start UI Config
+    # start UI Config
     ##########
     ui = fluidPage(
       titlePanel("TerraPlane"),
@@ -179,34 +155,26 @@ TerraPlane = function() {
                                 tabPanel("Method",h3("Method"),
                                          htmlOutput("methodcode")),
                                 tabPanel("Configure",h3("Configure Method"),
-                                         actionButton("configureButton", "Configure"),
                                          uiOutput("billingwsnamespace_dropdown"),
                                          uiOutput("projectnames_dropdown"),
-                                         #textInput("workspaceNamespace", "Workspace Namespace"),
-                                         #textInput("wdlnamespace", "Namespace"),
                                          textInput("wdlname", "Name"),
-                                         #textInput("outputs", "Outputs"),
-                                         #textInput("prerequisites", "Prerequisites"),
-                                         shiny::tags$div(id = 'placeholder') 
+                                         textInput("outputs", "Outputs"),
+                                         shiny::tags$div(id = 'placeholder'),
+                                         actionButton("sendToTerra", "Send To Terra"),
+                                         actionButton("runOnTerra", "Run")
                                 ),
-                                tabPanel("CurrentConfig",h3("Method"),
-                                         actionButton("sendToTerra", "SendToTerra"),
-                                         textOutput("currentconfig")),
                                 tabPanel("About", h3("About"), HTML('<br> Terraplane is a shiny interface to help filter and configure dockstore methods
                                                                     based on search term. <br>')
                                 )
-                                
                                 )
-                              
+                              )
                     )
-                    )
-    )
-    ,
+      ),
     ####################
-    #Start Server Config
+    # Start Server Config
     ####################
     server = function(input, output, session) {
-      #set up output
+      # set up output
       observeEvent(input$filterButton, {
         subs = tryCatch(filterDS(input$filterPattern), 
                         error=function(e) print("Please enter a valid pattern!"))
@@ -220,22 +188,26 @@ TerraPlane = function() {
           output$mytable = DT::renderDataTable(subs)
         }
       })
+      
+      # dropdown for billing groups a user belongs to
       output$billingwsnamespace_dropdown <- renderUI({
-        ws = httr::content(terra$listWorkspaces())
+        ws = content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
-        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
-        #from this get the names avaiable for the chosen billing(workspace) group
+        # options for workspace namespace
+        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  
+        # from this get the names avaiable for the chosen billing(workspace) group
         workspacename = as.list(workspace_name)
         selectInput("workspaceNamespace", 
                     "Select Workspace Namespace",
                     choices = workspacename
         )
       })
+      
+      # dropdown for project names available under a billing group
       output$projectnames_dropdown <- renderUI({
-        ws = httr::content(terra$listWorkspaces())
+        ws = content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
-        myws_details = ws[mine]
         myws_details = ws[mine]
         for(i in myws_details){
           mybilling = sapply(myws_details, function(x) {x$workspace$namespace==input$workspaceNamespace})
@@ -247,14 +219,13 @@ TerraPlane = function() {
                     "Select Project Name",
                     choices = myProjectNames
         )
-        
       })
+      
+      # display the method code 
       output$methodcode=renderText({
         mytext="No Method Selected"
         s = input$mytable_rows_selected
         if (length(s)) {
-          clearInputs()
-          resetGlobal()
           curPath<<-mytable[s,"full_workflow_path"]
           if(!is.na(curPath)){
             myres=getWDL(curPath)
@@ -269,12 +240,14 @@ TerraPlane = function() {
         mytext
       })
       
+      # allow users to reset configuration
       observeEvent(input$resetButton, {
         subs=data.frame(id=NA,workflow=NA)
         output$mytable = DT::renderDataTable({subs},options = list(scrollX = TRUE,pageLength=5))
         clearInputs()
       })
       
+      # clear inputs
       clearInputs <- function(){
         for(i in 1:length(ids)){
           removeUI(
@@ -284,13 +257,14 @@ TerraPlane = function() {
         ids<<-c()
       }
       
+      # send defined configuration to Terra
       observeEvent(input$sendToTerra, {
-        terra$postWorkspaceMethodConfig(
+        TerraLogs<<-terra$postWorkspaceMethodConfig(
           workspaceNamespace=input$workspaceNamespace,
           workspaceName=input$wdlnamespace,
           namespace=input$wdlnamespace,
           name=input$wdlname,
-          rootEntityType="string",
+          rootEntityType=NA,
           inputs=wdlInputsList,
           outputs=AnVIL::empty_object,
           prerequisites=AnVIL::empty_object,
@@ -304,18 +278,14 @@ TerraPlane = function() {
         showNotification("Method posted on Terra!")
       })
       
-      observeEvent(input$configureButton, {
-        myinputs=sapply(wdlinputNames, function(x){
-          input[[x]]
-        })
-        names(myinputs)=wdlinputNamesUnc
-        wdlInputsList<<-as.list(myinputs)
-        wdlconfig<<-createConfig(input$wdlnamespace, input$wdlname, wdlInputsList )
-        res <- fromJSON(wdlconfig)
-        l1 = do.call(paste, list(names(res),res ))
-        output$currentconfig=renderText(l1)
-        showNotification("Configured!")
+      # create and submit jobs on Terra
+      observeEvent(input$runOnTerra, {
+        terra$createSubmission(
+          workspaceNamespace=input$workspaceNamespace,
+          workspaceName=input$wdlnamespace,
+          methodConfigurationNamespace=input$wdlnamespace,
+          methodConfigurationName=input$wdlname,
+          useCallCache=TRUE)
+        showNotification("Job created!")
       })
-    }
-    )
-}
+      

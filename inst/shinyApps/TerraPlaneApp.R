@@ -160,12 +160,7 @@ TerraPlane = function() {
                                          textInput("wdlname", "Name"),
                                          textInput("outputs", "Outputs"),
                                          shiny::tags$div(id = 'placeholder'),
-                                         actionButton("sendToTerra", "Send To Terra")
-                                ),
-                                tabPanel("Run",h3("Pick your tool & run on Terra"),
-                                         uiOutput("billingwsnamespace_dropdownn"),
-                                         uiOutput("projectnames_dropdownn"),
-                                         textInput("wdlname", "Name"),
+                                         actionButton("sendToTerra", "Send To Terra"),
                                          actionButton("runOnTerra", "Run")
                                 ),
                                 tabPanel("About", h3("About"), HTML('<br> Terraplane is a shiny interface to help filter and configure dockstore methods
@@ -211,38 +206,6 @@ TerraPlane = function() {
       
       # dropdown for project names available under a billing group
       output$projectnames_dropdown <- renderUI({
-        ws = content(terra$listWorkspaces())
-        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
-        myws_details = ws[mine]
-        for(i in myws_details){
-          mybilling = sapply(myws_details, function(x) {x$workspace$namespace==input$workspaceNamespace})
-        }
-        myProjectName = myws_details[mybilling]
-        project_names = lapply(myProjectName, function(x) {x$workspace$name})
-        myProjectNames = as.list(project_names)
-        selectInput("wdlnamespace", 
-                    "Select Project Name",
-                    choices = myProjectNames
-        )
-      })
-      
-      # dropdown for billing groups a user belongs to
-      output$billingwsnamespace_dropdownn <- renderUI({
-        ws = content(terra$listWorkspaces())
-        mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
-        myws_details = ws[mine]
-        # options for workspace namespace
-        workspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  
-        # from this get the names avaiable for the chosen billing(workspace) group
-        workspacename = as.list(workspace_name)
-        selectInput("workspaceNamespace", 
-                    "Select Workspace Namespace",
-                    choices = workspacename
-        )
-      })
-      
-      # dropdown for project names available under a billing group
-      output$projectnames_dropdownn <- renderUI({
         ws = content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
@@ -325,6 +288,5 @@ TerraPlane = function() {
           useCallCache=TRUE)
         showNotification("Job created!")
       })
-      
     })
 }

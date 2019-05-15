@@ -5,3 +5,8 @@
 Shiny App to help filter dockstore to find methods & configure based on search term. 
 
 
+```{r code }
+devtools::install_github("shwetagopaul92/TerraPlane")
+runTerraPlane()
+```
+

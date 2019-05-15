@@ -5,8 +5,16 @@ date: "3/29/2019"
 output: html_document
 ---
 
-# terraplane
+# TerraPlane
 
 ![](images/terraplane.png){width=20%}
 
 Shiny App to help filter dockstore to find methods & configure based on search term. 
+
+To get started, install the package from github
+
+```{r code }
+devtools::install_github("shwetagopaul92/TerraPlane")
+runTerraPlane()
+```
+

@@ -259,6 +259,11 @@ TerraPlane = function() {
       
       # send defined configuration to Terra
       observeEvent(input$sendToTerra, {
+        myinputs=sapply(wdlinputNames, function(x){
+          input[[x]]
+        })
+        names(myinputs)=wdlinputNamesUnc
+        wdlInputsList<<-as.list(myinputs)
         TerraLogs<<-terra$postWorkspaceMethodConfig(
           workspaceNamespace=input$workspaceNamespace,
           workspaceName=input$wdlnamespace,
@@ -288,5 +293,5 @@ TerraPlane = function() {
           useCallCache=TRUE)
         showNotification("Job created!")
       })
-})
+    })
 }

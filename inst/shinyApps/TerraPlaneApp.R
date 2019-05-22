@@ -288,4 +288,5 @@ TerraPlane = function() {
           useCallCache=TRUE)
         showNotification("Job created!")
       })
-      
+})
+}

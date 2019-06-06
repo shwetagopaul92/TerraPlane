@@ -27,12 +27,12 @@ TerraPlane::runTerraStation()
 
 # TerraPlane
 
-Shiny App To help filter dockstore to find methods based on search term
+Shiny App To help filter dockstore to find methods based on search term.
 
 To start the App:
 
 ```{r code}
-TerraPlane::runTerraShip()
+TerraPlane::runTerraPlane()
 ```
 
 # TerraShip
@@ -42,4 +42,4 @@ Shiny App to help search, submit, monitor workflows on Terra.
 To start the App:
 
 ```{r code}
-TerraPlane::runTerraPlane()
+TerraPlane::runTerraShip()

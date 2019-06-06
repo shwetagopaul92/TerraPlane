@@ -2,8 +2,7 @@
 # Name: TerraPlane
 # Goal: To help filter dockstore to find methods
 #      based on search term
-#
-####################################
+#####################################
 
 ########################
 # load libraries

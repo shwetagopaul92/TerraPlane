@@ -148,6 +148,9 @@ TerraPlane = function() {
                                  actionButton("resetButton", "Reset")
                     ),
                     mainPanel("",width=10,
+                              (tags$style(type="text/css",
+                                          ".shiny-output-error { visibility: hidden; }",
+                                          ".shiny-output-error:before { visibility: hidden; }")),
                               tabsetPanel(
                                 tabPanel("Data",h3("Current Data"),
                                          DT::dataTableOutput('mytable')),

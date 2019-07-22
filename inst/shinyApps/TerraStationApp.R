@@ -113,11 +113,28 @@ listBullet<-function(mylist,mylistnames){
   return(myhtml)
 }
 
-#function to convert details list
+# function to convert details list
 fixMe<-function(meList){
   mydf=data.frame(matrix(unlist(meList),ncol=2,byrow=TRUE))
   names(mydf)=c("Key","Value")
   mydf
+}
+
+# function to create cluster on swagger with httr
+createCluster <- function(googleProject, clusterName, jupyterDockerImage, rstudioDockerImage){
+  # to get the access token 
+  access=jsonlite::fromJSON(system.file(package="AnVIL",path="service/terra/auth.json"))
+  app <- oauth_app(
+    "Leonardo",
+    key= access$client_id,
+    secret = access$client_secret
+  )
+  token <- oauth2.0_token(
+    oauth_endpoints("google"), app,
+    scope= "openid email"
+  )
+  url=paste0("https://notebooks.firecloud.org/api/cluster/v2/",googleProject,"/",clusterName)
+  httr::PUT(url = url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
 }
 
 
@@ -167,6 +184,12 @@ TerraStation = function() {
                             actionButton("refreshSubmission","Refresh")),
                    tabPanel("Monitor Clusters",h3("Monitor Clusters"),
                             DT::dataTableOutput("clusterDetails")),
+                   tabPanel("Create Cluster", h3("Create Cluster"),
+                            textInput("googleProject", "Google Project Name"),
+                            textInput("clusterName", "Cluster Name"),
+                            textInput("jupyterDockerImage", "Jupyter Docker Image"),
+                            textInput("rstudioDockerImage", "RStudio Docker Image"),
+                            actionButton("createCluster","Create Cluster")),
                    tabPanel("About", h3("About"), HTML('<br> TerraStation is a shiny interface to help begin using Terra in R <br>'))
       )
     ),
@@ -245,7 +268,6 @@ TerraStation = function() {
         s = input$billingDetails_rows_selected
         if (length(s)) {
           do.call("rbind.data.frame",content(terra$listBillingProjectMembers(billtab$projectName[s])))
-          
         }
       })
       
@@ -260,38 +282,35 @@ TerraStation = function() {
           str(content(terra$getGroup(grouptab$groupName[s])))
           
         }
-        
-        #populate workspace table
-        myworkspaces=content(terra$listWorkspaces())
-        parseWorkspace<-function(listElement){
-          res=list()
-          res$accessLevel= listElement[1]$accessLevel
-          res$public= listElement[2]$public
-          wp=listElement[3]$workspace
-          res$name=wp$name
-          res$namespace=wp$namespace
-          res$bucketName=wp$bucketName
-          res$createdBy=wp$createdBy
-          res$createdDate=wp$createdDate
-          res$lastModified=wp$lastModified
-          res$workspaceId=wp$workspaceId
-          res
-        }
-        
-        output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
-        
-        #populate cluster info
-        clusters=content(leonardo$listClusters())
-        tempDFCL=lapply(clusters,fixCL)
-        clDetailDF = do.call("rbind.data.frame",tempDFCL)
-        output$clusterDetails=renderDT({clDetailDF})
       })
+      #populate workspace table
+      myworkspaces=content(terra$listWorkspaces())
+      parseWorkspace<-function(listElement){
+        res=list()
+        res$accessLevel= listElement[1]$accessLevel
+        res$public= listElement[2]$public
+        wp=listElement[3]$workspace
+        res$name=wp$name
+        res$namespace=wp$namespace
+        res$bucketName=wp$bucketName
+        res$createdBy=wp$createdBy
+        res$createdDate=wp$createdDate
+        res$lastModified=wp$lastModified
+        res$workspaceId=wp$workspaceId
+        res
+      }
+        
+      output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
+        
+      #populate cluster info
+      clusters=content(leonardo$listClusters())
+      tempDFCL=lapply(clusters,fixCL)
+      clDetailDF = do.call("rbind.data.frame",tempDFCL)
+      output$clusterDetails=renderDT({clDetailDF})
       
       #Create Workspace
       observeEvent(input$createWorkspace, {
-        
         a=terra$createWorkspace(input$workspaceNamespace2,input$newWorkspaceName, attributes=AnVIL::empty_object)
-        
       })
       
       # monitor job submission
@@ -312,6 +331,11 @@ TerraStation = function() {
       observeEvent(input$refreshSubmission, {
         output$submissionDetails = DT::renderDataTable(monitorSub(input$workspaceNamespace, input$wdlnamespace,
                                                                   input$name))
+      })
+      
+      # observe event create cluster
+      observeEvent(input$createCluster, {
+        createCluster(input$googleProject, input$clusterName, input$jupyterDockerImage, input$rstudioDockerImage)
       })
       
     }

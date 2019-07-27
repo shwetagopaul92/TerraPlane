@@ -22,7 +22,7 @@ grouptab=NA
 
 # function to fetch project names under a billing group
 getProjectNames <- function(billingworkspace_name){
-  ws = content(terra$listWorkspaces())
+  ws = httr::content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
   myws_details = ws[mine]
   for(i in myws_details){
@@ -34,7 +34,7 @@ getProjectNames <- function(billingworkspace_name){
 
 # function to fetch billing groups a user belongs to
 getBillingWorkspace <- function(){
-  ws = content(terra$listWorkspaces())
+  ws = httr::content(terra$listWorkspaces())
   mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
   myws_details = ws[mine]
   billingworkspace_name = lapply(myws_details, function(x) {x$workspace$namespace})  # options for workspace namespace
@@ -65,16 +65,23 @@ fixCL<-function(mylistElement){
     "dateAccessed",       "stopAfterCreation",  "status" ,           
     "clusterUrl",         "clusterName",        "operationName",     
     "googleId",           "createdDate"       
-    
   )
-  
+  myrow=as.data.frame(mylistElement[keepCols])
+  myrow
+}
+
+#function to fix rows in billing table
+fixBILL<-function(mylistElement){
+  keepCols = c(
+    "creationStatus", "projectName",    "role"
+  )
   myrow=as.data.frame(mylistElement[keepCols])
   myrow
 }
 
 # function to monitor job submissions
 monitorSub <- function(workspaceNamespace, wdlnamespace){
-  subDetails = content(terra$listSubmissions(workspaceNamespace,wdlnamespace))
+  subDetails = httr::content(terra$listSubmissions(workspaceNamespace,wdlnamespace))
   tempDF=lapply(subDetails,fixWF)
   detailDF = do.call("rbind.data.frame",tempDF)
   detailDF
@@ -82,7 +89,7 @@ monitorSub <- function(workspaceNamespace, wdlnamespace){
 
 # function to abort jobs
 abortSubmission <- function(workspaceNamespace, wdlnamespace, name){
-  subDetails = content(terra$listSubmissions(workspaceNamespace,wdlnamespace))
+  subDetails = httr::content(terra$listSubmissions(workspaceNamespace,wdlnamespace))
   for(detail in subDetails){
     mydetail = sapply(subDetails, function(x) {x$methodConfigurationName==name})
   }
@@ -134,7 +141,27 @@ createCluster <- function(googleProject, clusterName, jupyterDockerImage, rstudi
     scope= "openid email"
   )
   url=paste0("https://notebooks.firecloud.org/api/cluster/v2/",googleProject,"/",clusterName)
-  httr::PUT(url = url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
+  httr::PUT(url=url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
+  showNotification("Cluster Created!")
+}
+
+# function to delete a running cluster with httr
+deleteCluster <- function(googleProject, clusterName){
+  # to get the access token 
+  access=jsonlite::fromJSON(system.file(package="AnVIL",path="service/terra/auth.json"))
+  app <- oauth_app(
+    "Leonardo",
+    key= access$client_id,
+    secret = access$client_secret
+  )
+  token <- oauth2.0_token(
+    oauth_endpoints("google"), app,
+    scope= "openid email"
+  )
+  url=paste0("https://notebooks.firecloud.org/api/cluster/v2/",googleProject,"/",clusterName)
+  res = httr::DELETE(url=url, encode="json", httr::config(token=token))
+  #showNotification("Cluster Deleted!")
+  res
 }
 
 
@@ -183,13 +210,15 @@ TerraStation = function() {
                             actionButton("abortSubmission","Abort"),
                             actionButton("refreshSubmission","Refresh")),
                    tabPanel("Monitor Clusters",h3("Monitor Clusters"),
-                            DT::dataTableOutput("clusterDetails")),
+                            DT::dataTableOutput("clusterDetails"),
+                            actionButton("deleteCluster","Delete")),
                    tabPanel("Create Cluster", h3("Create Cluster"),
                             textInput("googleProject", "Google Project Name"),
                             textInput("clusterName", "Cluster Name"),
                             textInput("jupyterDockerImage", "Jupyter Docker Image"),
                             textInput("rstudioDockerImage", "RStudio Docker Image"),
-                            actionButton("createCluster","Create Cluster")),
+                            actionButton("createCluster","Create Cluster"),
+                            actionButton("deleteCluster","Delete Cluster")),
                    tabPanel("About", h3("About"), HTML('<br> TerraStation is a shiny interface to help begin using Terra in R <br>'))
       )
     ),
@@ -200,7 +229,7 @@ TerraStation = function() {
       
       # dropdown for billing groups a user belongs to
       output$billingwsnamespace_dropdown <- renderUI({
-        ws = content(terra$listWorkspaces())
+        ws = httr::content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
         # options for workspace namespace
@@ -214,7 +243,7 @@ TerraStation = function() {
       
       # dropdown for billing groups a user belongs to
       output$billingwsnamespace_dropdown2 <- renderUI({
-        ws = content(terra$listWorkspaces())
+        ws = httr::content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
         # options for workspace namespace
@@ -228,7 +257,7 @@ TerraStation = function() {
       
       # dropdown for project names available under a billing group
       output$projectnames_dropdown <- renderUI({
-        ws = content(terra$listWorkspaces())
+        ws = httr::content(terra$listWorkspaces())
         mine = sapply(ws, function(x){x$accessLevel=="PROJECT_OWNER"})
         myws_details = ws[mine]
         for(i in myws_details){
@@ -247,7 +276,7 @@ TerraStation = function() {
       output$toolnames_dropdown <- renderUI({
         ws = terra$listWorkspaceMethodConfigs(workspaceNamespace = input$workspaceNamespace,
                                               workspaceName = input$wdlnamespace,allRepos = TRUE)
-        ws_tool_names = content(ws)
+        ws_tool_names = httr::content(ws)
         all_tool_names = lapply(ws_tool_names, function(x) {x$name})
         selectInput("name",
                     "Select Tool",
@@ -255,62 +284,63 @@ TerraStation = function() {
         )
       })
       
-      #populate Me Table
-      output$meDetails=DT::renderDataTable(fixMe(content(terra$getAll())[[2]]))
+      # populate Me Table
+      output$meDetails = DT::renderDataTable(fixMe(httr::content(terra$getAll())[[2]]))
       
+      # populate Billing Table
+      billtab<<-do.call("rbind.data.frame",lapply(httr::content(terra$billing()), fixBILL))
       
-      #populate Billing Table
-      billtab<<-do.call("rbind.data.frame",content(terra$billing()))
-      output$billingDetails=DT::renderDataTable(billtab, selection = 'single')
+      output$billingDetails = DT::renderDataTable(billtab, selection = 'single')
       
-      #populate billing memberships
-      output$billingMembers=DT::renderDataTable({
+      # populate billing memberships
+      output$billingMembers = DT::renderDataTable({
         s = input$billingDetails_rows_selected
         if (length(s)) {
-          do.call("rbind.data.frame",content(terra$listBillingProjectMembers(billtab$projectName[s])))
+          do.call("rbind.data.frame", httr::content(terra$listBillingProjectMembers(billtab$projectName[s])))
         }
       })
       
-      #populate Groups Table
-      grouptab<<-do.call("rbind.data.frame",content(terra$getGroups()))
-      output$groupDetails=DT::renderDataTable(grouptab, selection = 'single')
+      # populate Groups Table
+      grouptab<<-do.call("rbind.data.frame", httr::content(terra$getGroups()))
+      output$groupDetails = DT::renderDataTable(grouptab, selection = 'single')
       
-      #populate Group memberships
+      # populate Group memberships
       output$groupMembers=renderPrint({
         s = input$groupDetails_rows_selected
         if (length(s)) {
-          str(content(terra$getGroup(grouptab$groupName[s])))
+          str(httr::content(terra$getGroup(grouptab$groupName[s])))
           
         }
       })
-      #populate workspace table
-      myworkspaces=content(terra$listWorkspaces())
+      
+      # populate workspace table
+      myworkspaces = httr::content(terra$listWorkspaces())
       parseWorkspace<-function(listElement){
-        res=list()
-        res$accessLevel= listElement[1]$accessLevel
-        res$public= listElement[2]$public
-        wp=listElement[3]$workspace
-        res$name=wp$name
-        res$namespace=wp$namespace
-        res$bucketName=wp$bucketName
-        res$createdBy=wp$createdBy
-        res$createdDate=wp$createdDate
-        res$lastModified=wp$lastModified
-        res$workspaceId=wp$workspaceId
+        res = list()
+        res$accessLevel = listElement[1]$accessLevel
+        res$public = listElement[2]$public
+        wp = listElement[3]$workspace
+        res$name = wp$name
+        res$namespace = wp$namespace
+        res$bucketName = wp$bucketName
+        res$createdBy = wp$createdBy
+        res$createdDate = wp$createdDate
+        res$lastModified = wp$lastModified
+        res$workspaceId = wp$workspaceId
         res
       }
-        
-      output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
-        
-      #populate cluster info
-      clusters=content(leonardo$listClusters())
-      tempDFCL=lapply(clusters,fixCL)
-      clDetailDF = do.call("rbind.data.frame",tempDFCL)
-      output$clusterDetails=renderDT({clDetailDF})
       
-      #Create Workspace
+      output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
+      
+      # populate cluster info
+      clusters = httr::content(leonardo$listClusters())
+      tempDFCL = lapply(clusters,fixCL)
+      clDetailDF = do.call("rbind.data.frame",tempDFCL)
+      output$clusterDetails = renderDT({clDetailDF})
+      
+      # create Workspace
       observeEvent(input$createWorkspace, {
-        a=terra$createWorkspace(input$workspaceNamespace2,input$newWorkspaceName, attributes=AnVIL::empty_object)
+        a = terra$createWorkspace(input$workspaceNamespace2,input$newWorkspaceName, attributes=AnVIL::empty_object)
       })
       
       # monitor job submission
@@ -338,5 +368,15 @@ TerraStation = function() {
         createCluster(input$googleProject, input$clusterName, input$jupyterDockerImage, input$rstudioDockerImage)
       })
       
+      # observer event delete cluster
+      observeEvent(input$deleteCluster, {
+        res = deleteCluster(input$googleProject, input$clusterName)
+        if(res$status_code != 200){
+          showNotification("Deleting!")
+        }
+        else{
+          showNotification("Deleted!")
+        }
+      })
     }
-  )}
+)}

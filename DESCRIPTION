@@ -1,7 +1,7 @@
 Package: TerraPlane
 Title: TerraPlane
 Description: The TerraPlane suite is a collection of Shiny Based R apps to help use the Terra platform.
-Version: 0.2.1
+Version: 0.2.2
 Author: BJ Stubbs, Shweta Gopaulakrishnan
 Depends: DT, AnVIL, shiny, httr, jsonlite
 Suggests: knitr

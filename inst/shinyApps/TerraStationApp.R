@@ -162,6 +162,32 @@ deleteCluster <- function(googleProject, clusterName){
   res
 }
 
+# datatable for dataset information of workspace
+datasetInfo <- function(billing, workspace){
+  ws = httr::content(terra$getWorkspace(billing,workspace))
+  wdata = data.frame(
+    num_subjects = ws$workspace$attributes$`library:numSubjects`,
+    data_category = ws$workspace$attribute$`library:dataCategory`$items[[1]],
+    dataset_version = ws$workspace$attribute$`library:datasetVersion`,
+    dataset_cus = ws$workspace$attribute$`library:datasetCustodian`,
+    dataset_depositor = ws$workspace$attribute$`library:datasetDepositor`,
+    dataset_contact = ws$workspace$attribute$`library:contactEmail`,
+    dataset_research = ws$workspace$attribute$`library:institute`,
+    dataset_projectname = ws$workspace$attribute$`library:projectName`,
+    dataset_genome = ws$workspace$attribute$`library:reference`,
+    fileform = ws$workspace$attribute$`library:dataFileFormats`,
+    study_design = ws$workspace$attribute$`library:studyDesign`,
+    approval = ws$workspace$attribute$`library:requiresExternalApproval`
+  )
+  DT::datatable(wdata)
+}
+
+# get workspace description
+workspaceDes <- function(billing, workspace){
+  ws = httr::content(terra$getWorkspace(billing,workspace))
+  wsDesc = ws$workspace$attributes$description
+  wsDesc
+}
 
 # Setup:
 
@@ -197,13 +223,16 @@ TerraStation = function() {
                    tabPanel("Create Workspace",h3("Create Workspace"),
                             uiOutput("billingwsnamespace_dropdown2"),
                             textInput("newWorkspaceName", "Workspace Name"),
-                            actionButton("createWorkspace","Create Workspace")),
+                            actionButton("createWorkspace","Create Workspace")
+                   ),
                    tabPanel("View Workspaces",h3("Workspaces"),
-                            DT::dataTableOutput("workspaceInfo")),
-                   tabPanel("Available Datasets",h3("Workspace Datasets "),
+                            DT::dataTableOutput("workspaceInfo")
+                   ),
+                   tabPanel("Workspace Datasets",h3("Workspace Datasets "),
                             textInput("billing","Enter Billing Group"),
                             textInput("workspace","Enter Workspace Name"),
                             actionButton("submit","Submit"),
+                            verbatimTextOutput("description"),
                             DT::dataTableOutput("workspaceDatasets")
                    ),
                    tabPanel("Monitor Workflows",h3("Monitor"),
@@ -211,17 +240,20 @@ TerraStation = function() {
                             uiOutput("projectnames_dropdown"),
                             DT::dataTableOutput("submissionDetails"),
                             actionButton("abortSubmission","Abort"),
-                            actionButton("refreshSubmission","Refresh")),
+                            actionButton("refreshSubmission","Refresh")
+                   ),
                    tabPanel("Monitor Clusters",h3("Monitor Clusters"),
                             DT::dataTableOutput("clusterDetails"),
-                            actionButton("deleteCluster","Delete")),
+                            actionButton("deleteCluster","Delete")
+                   ),
                    tabPanel("Create Cluster", h3("Create Cluster"),
                             textInput("googleProject", "Google Project Name"),
                             textInput("clusterName", "Cluster Name"),
                             textInput("jupyterDockerImage", "Jupyter Docker Image"),
                             textInput("rstudioDockerImage", "RStudio Docker Image"),
                             actionButton("createCluster","Create Cluster"),
-                            actionButton("deleteCluster","Delete Cluster")),
+                            actionButton("deleteCluster","Delete Cluster")
+                   ),
                    tabPanel("About", h3("About"), HTML('<br> TerraStation is a shiny interface to help begin using Terra in R <br>'))
       )
     ),
@@ -335,29 +367,10 @@ TerraStation = function() {
       
       output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
       
-      # datatable for dataset information of workspace
-      datasetInfo <- function(billing, workspace){
-        ws = httr::content(terra$getWorkspace(billing,workspace))
-        wdata = data.frame(
-          num_subjects = ws$workspace$attributes$`library:numSubjects`,
-          data_category = ws$workspace$attribute$`library:dataCategory`$items[[1]],
-          dataset_version = ws$workspace$attribute$`library:datasetVersion`,
-          dataset_cus = ws$workspace$attribute$`library:datasetCustodian`,
-          dataset_depositor = ws$workspace$attribute$`library:datasetDepositor`,
-          dataset_contact = ws$workspace$attribute$`library:contactEmail`,
-          dataset_research = ws$workspace$attribute$`library:institute`,
-          dataset_projectname = ws$workspace$attribute$`library:projectName`,
-          dataset_genome = ws$workspace$attribute$`library:reference`,
-          fileform = ws$workspace$attribute$`library:dataFileFormats`,
-          study_design = ws$workspace$attribute$`library:studyDesign`,
-          approval = ws$workspace$attribute$`library:requiresExternalApproval`
-        )
-        #print(paste0("Workspace Description is",workspace_attributes$description))
-        DT::datatable(wdata)
-        
-      }
-      
+      # output workspace information in detail 
       observeEvent(input$submit, {
+        output$description <- renderText({workspaceDes(input$billing, input$workspace)})
+        br()
         output$workspaceDatasets = DT::renderDataTable(datasetInfo(input$billing, input$workspace))
       })
       

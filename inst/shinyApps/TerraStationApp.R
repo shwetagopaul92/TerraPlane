@@ -42,8 +42,6 @@ getBillingWorkspace <- function(){
   getProjectNames(billingworkspace_name)
 }
 
-
-
 #function to fix rows in workflow table
 fixWF<-function(mylistElement){
   myrow=as.data.frame(mylistElement)
@@ -202,7 +200,12 @@ TerraStation = function() {
                             actionButton("createWorkspace","Create Workspace")),
                    tabPanel("View Workspaces",h3("Workspaces"),
                             DT::dataTableOutput("workspaceInfo")),
-                   
+                   tabPanel("Available Datasets",h3("Workspace Datasets "),
+                            textInput("billing","Enter Billing Group"),
+                            textInput("workspace","Enter Workspace Name"),
+                            actionButton("submit","Submit"),
+                            DT::dataTableOutput("workspaceDatasets")
+                   ),
                    tabPanel("Monitor Workflows",h3("Monitor"),
                             uiOutput("billingwsnamespace_dropdown"),
                             uiOutput("projectnames_dropdown"),
@@ -332,6 +335,32 @@ TerraStation = function() {
       
       output$workspaceInfo=DT::renderDataTable(do.call("rbind.data.frame",lapply(myworkspaces,parseWorkspace)))
       
+      # datatable for dataset information of workspace
+      datasetInfo <- function(billing, workspace){
+        ws = httr::content(terra$getWorkspace(billing,workspace))
+        wdata = data.frame(
+          num_subjects = ws$workspace$attributes$`library:numSubjects`,
+          data_category = ws$workspace$attribute$`library:dataCategory`$items[[1]],
+          dataset_version = ws$workspace$attribute$`library:datasetVersion`,
+          dataset_cus = ws$workspace$attribute$`library:datasetCustodian`,
+          dataset_depositor = ws$workspace$attribute$`library:datasetDepositor`,
+          dataset_contact = ws$workspace$attribute$`library:contactEmail`,
+          dataset_research = ws$workspace$attribute$`library:institute`,
+          dataset_projectname = ws$workspace$attribute$`library:projectName`,
+          dataset_genome = ws$workspace$attribute$`library:reference`,
+          fileform = ws$workspace$attribute$`library:dataFileFormats`,
+          study_design = ws$workspace$attribute$`library:studyDesign`,
+          approval = ws$workspace$attribute$`library:requiresExternalApproval`
+        )
+        #print(paste0("Workspace Description is",workspace_attributes$description))
+        DT::datatable(wdata)
+        
+      }
+      
+      observeEvent(input$submit, {
+        output$workspaceDatasets = DT::renderDataTable(datasetInfo(input$billing, input$workspace))
+      })
+      
       # populate cluster info
       clusters = httr::content(leonardo$listClusters())
       tempDFCL = lapply(clusters,fixCL)
@@ -350,10 +379,10 @@ TerraStation = function() {
       observeEvent(input$abortSubmission, {
         res = abortSubmission(input$workspaceNamespace, input$wdlnamespace, input$name)
         if(res$status_code != 200){
-          showNotification("Aborting!")
+          showNotification("Aborting")
         }
         else{
-          showNotification("Aborted!")
+          showNotification("Aborted")
         }
       })
       
@@ -370,12 +399,15 @@ TerraStation = function() {
       
       # observer event delete cluster
       observeEvent(input$deleteCluster, {
-        res = deleteCluster(input$googleProject, input$clusterName)
+        clusterSelected = input$clusterDetails_rows_selected
+        googleProject = clusterDetails[3, "googleProject"]
+        clusterName = clusterDetails[3, "clusterName"]
+        res = deleteCluster(googleProject, clusterName)
         if(res$status_code != 200){
-          showNotification("Deleting!")
+          showNotification("Deleting")
         }
         else{
-          showNotification("Deleted!")
+          showNotification("Deleted")
         }
       })
     }

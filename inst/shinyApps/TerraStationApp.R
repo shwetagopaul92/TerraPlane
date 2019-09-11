@@ -57,12 +57,9 @@ fixWF<-function(mylistElement){
 
 #function to fix rows in cluster table
 fixCL<-function(mylistElement){
-  keepCols = c(
-    "autopauseThreshold", "stagingBucket",          "creator",            "googleProject",     
-    "id",                          
-    "dateAccessed",       "stopAfterCreation",  "status" ,           
-    "clusterUrl",         "clusterName",        "operationName",     
-    "googleId",           "createdDate"       
+  keepCols = c("clusterName","creator","googleProject",  
+               "status","id", "createdDate",                      
+               "dateAccessed","autopauseThreshold"          
   )
   myrow=as.data.frame(mylistElement[keepCols])
   myrow
@@ -139,7 +136,13 @@ createCluster <- function(googleProject, clusterName, jupyterDockerImage, rstudi
     scope= "openid email"
   )
   url=paste0("https://notebooks.firecloud.org/api/cluster/v2/",googleProject,"/",clusterName)
-  httr::PUT(url=url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
+  if(nchar(rstudioDockerImage)>5){
+    httr::PUT(url=url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
+  }
+  else{
+    httr::PUT(url=url, body=list(jupyterDockerImage=jupyterDockerImage), encode="json", httr::config(token=token))
+  }
+  #httr::PUT(url=url, body=list(jupyterDockerImage=jupyterDockerImage,rstudioDockerImage=rstudioDockerImage), encode="json", httr::config(token=token))
   showNotification("Cluster Created!")
 }
 
